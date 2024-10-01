@@ -1,7 +1,9 @@
-.PHONY: check-fmt
-check-fmt:
-	@find . -type f -name "*.lua" -exec stylua --check --output-format Summary {} + -print
+SHELL=/bin/bash -O extglob -c
 
 .PHONY: fmt
 fmt:
-	@find . -type f -name "*.lua" -exec stylua {} + -print
+	@stylua **/*.lua
+
+.PHONY: lint
+lint:
+	@luacheck **/*.lua

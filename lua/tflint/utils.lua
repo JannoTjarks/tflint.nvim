@@ -2,96 +2,86 @@ local M = {}
 
 local config = require("tflint").get_config()
 local notify_suffix = require("tflint").get_notify_suffix()
+local errors = require("tflint.errors")
 
-local function check_tflint_installation()
+--- Runs the command `tflint` and returns the a vim.SystemCompleted
+---@return vim.SystemCompleted
+---@nodiscard
+local function run_tflint()
+    return vim.system({ config.tflint_path }, { text = true }):wait()
+end
+
+--- Runs the command `tflint --init` and returns the a vim.SystemCompleted
+---@return vim.SystemCompleted
+---@nodiscard
+local function run_tflint_init()
+    return vim.system({ config.tflint_path, "--init" }, { text = true }):wait()
+end
+
+--- Checks, if tflint is installed. Thats done by looking up the path
+--- specified in the configuration.
+---@return boolean
+---@nodiscard
+M.is_tflint_installed = function()
     if vim.fn.findfile(config.tflint_path) == "" then
-        vim.notify_once(notify_suffix .. "tflint needs to be installed!", vim.log.levels.INFO)
-        return 1
+        vim.notify(notify_suffix .. "tflint needs to be installed!", vim.log.levels.INFO)
+        return false
     end
 
-    return 0
+    return true
 end
 
-local function check_tflint_init()
-    local tflint_init = vim.fn.system({
-        config.tflint_path,
-        "--init",
-    })
+--- Initializes tflint if neccassary. Returns true after
+--- successful initialization, otherwise false will be returned
+---@return boolean
+---@nodiscard
+M.initialize_tflint = function()
+    vim.notify(notify_suffix .. "tflint plugins are missing!", vim.log.levels.INFO)
+    vim.notify(notify_suffix .. "tflint plugins will be installed...", vim.log.levels.INFO)
 
-    return tflint_init
-end
-
-local function check_mason_nvim_installation()
-    if vim.fn.finddir(config.mason_path) == "" then
-        vim.notify_once(notify_suffix .. "mason.nvim needs to be installed!", vim.log.levels.INFO)
-        return 1
-    end
-
-    return 0
-end
-
-function M.validate_tflint_installation()
-    if check_tflint_installation() == 0 then
-        return 0
-    end
-
-    if config.use_mason == false then
-        return 1
-    end
-
-    if not check_mason_nvim_installation() == 0 then
-        return 1
-    end
-
-    vim.notify_once(
-        notify_suffix .. "tflint will be installed through mason.nvim...",
-        vim.log.levels.INFO
-    )
-    vim.cmd("MasonInstall tflint")
-
-    return 2
-end
-
-function M.initialize_tflint()
-    local tflint_check = vim.fn.system({
-        config.tflint_path,
-    })
-
-    local msg_not_initialized = 'Plugin "%w*" not found.'
-    if string.find(tflint_check, msg_not_initialized) then
-        vim.notify_once(
-            notify_suffix .. "tflint plugins need to be installed...",
-            vim.log.levels.INFO
-        )
-        vim.fn.system({
-            config.tflint_path,
-            "--init",
-        })
-
-        local tflint_init_status = check_tflint_init()
-        if string.find(tflint_init_status, "Failed to install a plugin") then
-            vim.notify_once(notify_suffix .. tflint_init_status, vim.log.levels.INFO)
-            return 1
+    local tflint_init_stderr = run_tflint_init().stderr
+    local init_errors = errors.error_messages_init
+    for _, error_message in pairs(init_errors) do
+        if tflint_init_stderr ~= nil and string.find(tflint_init_stderr, error_message) then
+            vim.notify(notify_suffix .. tflint_init_stderr, vim.log.levels.INFO)
+            return false
         end
-
-        vim.notify_once(notify_suffix .. "tflint is initialized!", vim.log.levels.INFO)
-
-        vim.notify_once(
-            notify_suffix .. "Reconnecting tflint language server...",
-            vim.log.levels.INFO
-        )
-        require("lspconfig").tflint.launch()
-        vim.notify_once(notify_suffix .. "Reconnected tflint language server!", vim.log.levels.INFO)
-
-        return 0
     end
 
-    if string.find(check_tflint_init(), "is already installed") then
-        return 0
+    vim.notify(notify_suffix .. "tflint is initialized!", vim.log.levels.INFO)
+
+    vim.notify(notify_suffix .. "Reconnecting tflint language server...", vim.log.levels.INFO)
+    --- TODO: expects, that nvim-lspconfig is used for the tflint language server
+    require("lspconfig").tflint.launch()
+    vim.notify(notify_suffix .. "Reconnected tflint language server!", vim.log.levels.INFO)
+
+    return true
+end
+
+--- Checks, if all tflint plugins are installed
+---
+--- Returns true, if a plugin is missing. Otherwise false
+---@return boolean
+---@nodiscard
+M.check_if_tflint_plugins_are_missing = function()
+    local tflint_stderr = run_tflint().stderr
+    local msg_not_initialized = 'Plugin "%w*" not found.'
+    if tflint_stderr ~= nil and string.find(tflint_stderr, msg_not_initialized) then
+        return true
     end
 
-    vim.notify_once(notify_suffix .. tflint_check, vim.log.levels.INFO)
-    return 1
+    return false
+end
+
+---@return boolean
+---@nodiscard
+M.check_if_tflint_is_healthy = function()
+    local tflint_stderr = run_tflint().stderr
+    if tflint_stderr ~= nil and string.len(tflint_stderr) ~= 0 then
+        vim.notify(notify_suffix .. tflint_stderr, vim.log.levels.WARN)
+        return false
+    end
+    return true
 end
 
 return M
