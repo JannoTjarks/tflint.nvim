@@ -25,7 +25,7 @@ installed `tflint` with [mason.nvim](https://github.com/williamboman/mason.nvim)
 ``` lua
 {
     "JannoTjarks/tflint.nvim",
-    version = "*"
+    version = "*",
     dependencies = {
         "neovim/nvim-lspconfig"
     },
@@ -38,7 +38,7 @@ Or use this snippet, if you have the `tflint` binary on a different path.
 ``` lua
 {
     "JannoTjarks/tflint.nvim",
-    version = "*"
+    version = "*",
     dependencies = {
         "neovim/nvim-lspconfig"
     },
@@ -49,4 +49,3 @@ Or use this snippet, if you have the `tflint` binary on a different path.
     end
 }
 ```
-
