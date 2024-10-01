@@ -7,8 +7,8 @@ vim.g.tflint_runned = true
 local notify_suffix = require("tflint").get_notify_suffix()
 local utils = require("tflint.utils")
 
-if utils.is_tflint_installed == true then
-    vim.notify(notify_suffix .. "please install tflint!", vim.log.levels.WARN)
+if utils.is_tflint_installed() == false then
+    vim.notify(notify_suffix .. "please install tflint! Without tflint the plugin is not able to work.", vim.log.levels.WARN)
     return
 end
 

@@ -24,7 +24,6 @@ end
 ---@nodiscard
 M.is_tflint_installed = function()
     if vim.fn.findfile(config.tflint_path) == "" then
-        vim.notify(notify_suffix .. "tflint needs to be installed!", vim.log.levels.INFO)
         return false
     end
 
